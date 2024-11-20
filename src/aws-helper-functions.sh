@@ -1,6 +1,6 @@
-alias awsm='main'
+alias awsm='awsm_main'
 
-main() {
+awsm_main() {
     case "$1" in
         login)
             aws_sso_login
