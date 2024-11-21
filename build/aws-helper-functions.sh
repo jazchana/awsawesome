@@ -1,3 +1,6 @@
+#!/bin/bash
+
+# login.sh
 _aws_sso_login() {
     # Check if AWS CLI is installed
     if ! command -v aws &> /dev/null; then
@@ -47,4 +50,30 @@ _aws_sso_login() {
     fi
 
     echo "Successfully logged in to AWS SSO with profile: $AWS_PROFILE"
+}
+# logout.sh
+_aws_sso_logout() {
+    if [ -n "$AWS_PROFILE" ]; then
+        echo "Logging out of AWS SSO for profile: $AWS_PROFILE..."
+        aws sso logout --profile "$AWS_PROFILE"
+        unset AWS_PROFILE
+        echo "Logged out and unset AWS_PROFILE"
+    else
+        echo "No AWS_PROFILE set."
+    fi
+}
+
+awsm() {
+    case "$1" in
+        login)
+            _aws_sso_login
+            ;;
+        logout)
+            _aws_sso_logout
+            ;;
+        *)
+            echo "Usage: awsm {login|logout}"
+            return 1
+            ;;
+    esac
 }
