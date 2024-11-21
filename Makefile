@@ -39,7 +39,7 @@ install: build
 	@cp completions/$(COMPLETION_FILE) $(COMPLETION_INSTALL_DIR)/
 	@if ! grep -q "source $(INSTALL_DIR)/$(SCRIPT_NAME)" $(PROFILE_FILE); then \
 		if [ "$(SHELL_TYPE)" = "zsh" ]; then \
-			if ! grep -q "# Initialize completion system" $(PROFILE_FILE); then \
+			if ! grep -q "autoload.*compinit" $(PROFILE_FILE) || ! grep -q "^compinit" $(PROFILE_FILE); then \
 				echo "\n# Initialize completion system" > $(PROFILE_FILE).tmp; \
 				echo "autoload -U bashcompinit && bashcompinit" >> $(PROFILE_FILE).tmp; \
 				echo "autoload -Uz compinit" >> $(PROFILE_FILE).tmp; \
@@ -61,7 +61,7 @@ install: build
 	@echo "Installed completions to $(COMPLETION_INSTALL_DIR)/$(COMPLETION_FILE)"
 	@echo "Added source lines to $(PROFILE_FILE)"
 	@if [ "$(SHELL_TYPE)" = "zsh" ]; then \
-		if ! grep -q "# Initialize completion system" $(PROFILE_FILE); then \
+		if ! grep -q "autoload.*compinit" $(PROFILE_FILE) || ! grep -q "^compinit" $(PROFILE_FILE); then \
 			echo "Note: Added completion system initialization to $(PROFILE_FILE)"; \
 		fi; \
 		echo "Note: Please restart your shell for completions to take effect"; \
