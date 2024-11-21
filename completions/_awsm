@@ -1,0 +1,30 @@
+#compdef awsm
+
+_awsm() {
+    local curcontext="$curcontext" state line
+    typeset -A opt_args
+
+    _arguments -C \
+        '1: :->command' \
+        '*:: :->args'
+
+    case $state in
+        command)
+            _values 'awsm commands' \
+                'login[Login to AWS SSO]' \
+                'logout[Logout from AWS SSO]'
+            ;;
+        args)
+            case $line[1] in
+                login)
+                    # Add any login-specific options here if needed
+                    ;;
+                logout)
+                    # Add any logout-specific options here if needed
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+compdef _awsm awsm

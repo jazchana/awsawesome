@@ -1,21 +1,19 @@
-alias awsm='awsm_main'
-
-awsm_main() {
+awsm() {
     case "$1" in
         login)
-            aws_sso_login
+            _aws_sso_login
             ;;
         logout)
-            aws_sso_logout
+            _aws_sso_logout
             ;;
         *)
-            echo "Usage: easyaws {login|logout}"
+            echo "Usage: awsm {login|logout}"
             return 1
             ;;
     esac
 }
 
-aws_sso_login() {
+_aws_sso_login() {
     # Check if AWS CLI is installed
     if ! command -v aws &> /dev/null; then
         echo "AWS CLI is not installed. Please install it and try again."
@@ -66,7 +64,7 @@ aws_sso_login() {
     echo "Successfully logged in to AWS SSO with profile: $AWS_PROFILE"
 }
 
-aws_sso_logout() {
+_aws_sso_logout() {
     if [ -n "$AWS_PROFILE" ]; then
         echo "Logging out of AWS SSO for profile: $AWS_PROFILE..."
         aws sso logout --profile "$AWS_PROFILE"

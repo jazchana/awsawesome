@@ -1,49 +1,62 @@
-PREFIX ?= /usr/local
-INSTALL_PATH = $(PREFIX)
-BASH_COMPLETION_DIR = $(shell brew --prefix)/etc/bash_completion.d
-ZSH_COMPLETION_DIR = $(shell brew --prefix)/share/zsh/site-functions
+# Installation directories
+INSTALL_DIR = $(HOME)/.local/share/aws-helpers
+SCRIPT_NAME = aws-helper-functions.sh
+COMPLETION_DIR = $(HOME)/.local/share/zsh/site-functions
 
-.PHONY: local-install local-uninstall
+# Detect shell and profile file
+SHELL_TYPE := $(shell basename "$$SHELL")
+ifeq ($(SHELL_TYPE),bash)
+    PROFILE_FILE := $(HOME)/.bashrc
+    COMPLETION_FILE := awsm.bash
+    COMPLETION_INSTALL_DIR := $(INSTALL_DIR)/completions
+else ifeq ($(SHELL_TYPE),zsh)
+    PROFILE_FILE := $(HOME)/.zshrc
+    COMPLETION_FILE := _awsm
+    COMPLETION_INSTALL_DIR := $(COMPLETION_DIR)
+else
+    PROFILE_FILE := $(HOME)/.profile
+    COMPLETION_FILE := awsm.bash
+    COMPLETION_INSTALL_DIR := $(INSTALL_DIR)/completions
+endif
 
-local-install:
-	@echo "Installing awsm..."
-	# Create installation directory
-	sudo mkdir -p $(INSTALL_PATH)/share/awsm
-	# Install the script
-	sudo install -m 755 src/aws-helper-functions.sh $(INSTALL_PATH)/share/awsm/aws-helper-functions.sh
-	# Add source command to shell profile if not already present
-	@if [ -f ~/.zprofile ] && ! grep -q "source $(INSTALL_PATH)/share/awsm/aws-helper-functions.sh" ~/.zprofile; then \
-		echo '\n# AWS Helper Functions\nsource $(INSTALL_PATH)/share/awsm/aws-helper-functions.sh' >> ~/.zprofile; \
-		echo "Added source line to ~/.zprofile"; \
-	fi
-	@if [ -f ~/.bash_profile ] && ! grep -q "source $(INSTALL_PATH)/share/awsm/aws-helper-functions.sh" ~/.bash_profile; then \
-		echo '\n# AWS Helper Functions\nsource $(INSTALL_PATH)/share/awsm/aws-helper-functions.sh' >> ~/.bash_profile; \
-		echo "Added source line to ~/.bash_profile"; \
-	fi
-	@echo "Installing completions..."
-	sudo mkdir -p $(BASH_COMPLETION_DIR)
-	sudo mkdir -p $(ZSH_COMPLETION_DIR)
-	sudo install -m 644 completions/awsm.bash $(BASH_COMPLETION_DIR)/awsm
-	sudo install -m 644 completions/awsm.zsh $(ZSH_COMPLETION_DIR)/_awsm
-	@echo "\nInstallation complete! Please restart your terminal or run:"
-	@echo "  source ~/.zprofile    # if you use zsh"
-	@echo "  source ~/.bash_profile # if you use bash"
+.PHONY: install uninstall
 
-local-uninstall:
-	@echo "Uninstalling awsm..."
-	sudo rm -f $(INSTALL_PATH)/share/awsm/aws-helper-functions.sh
-	sudo rmdir $(INSTALL_PATH)/share/awsm 2>/dev/null || true
-	# Remove source line from shell profiles
-	@if [ -f ~/.zprofile ]; then \
-		sed -i.bak '/# AWS Helper Functions/d' ~/.zprofile; \
-		sed -i.bak '/source.*aws-helper-functions.sh/d' ~/.zprofile; \
-		rm -f ~/.zprofile.bak; \
+install:
+	@mkdir -p $(INSTALL_DIR)
+	@mkdir -p $(COMPLETION_INSTALL_DIR)
+	@cp src/$(SCRIPT_NAME) $(INSTALL_DIR)/
+	@cp completions/$(COMPLETION_FILE) $(COMPLETION_INSTALL_DIR)/
+	@if ! grep -q "source $(INSTALL_DIR)/$(SCRIPT_NAME)" $(PROFILE_FILE); then \
+		echo "\n# AWS Helper Functions" >> $(PROFILE_FILE); \
+		echo "source $(INSTALL_DIR)/$(SCRIPT_NAME)" >> $(PROFILE_FILE); \
+		if [ "$(SHELL_TYPE)" = "bash" ]; then \
+			echo "source $(COMPLETION_INSTALL_DIR)/$(COMPLETION_FILE)" >> $(PROFILE_FILE); \
+		elif [ "$(SHELL_TYPE)" = "zsh" ]; then \
+			echo "fpath=($(COMPLETION_INSTALL_DIR) \$$fpath)" >> $(PROFILE_FILE); \
+			echo "autoload -U compinit" >> $(PROFILE_FILE); \
+			echo "compinit" >> $(PROFILE_FILE); \
+		fi \
 	fi
-	@if [ -f ~/.bash_profile ]; then \
-		sed -i.bak '/# AWS Helper Functions/d' ~/.bash_profile; \
-		sed -i.bak '/source.*aws-helper-functions.sh/d' ~/.bash_profile; \
-		rm -f ~/.bash_profile.bak; \
+	@echo "Installed AWS helper functions to $(INSTALL_DIR)/$(SCRIPT_NAME)"
+	@echo "Installed completions to $(COMPLETION_INSTALL_DIR)/$(COMPLETION_FILE)"
+	@echo "Added source lines to $(PROFILE_FILE)"
+	@if [ "$(SHELL_TYPE)" = "zsh" ]; then \
+		echo "Note: Please restart your shell for completions to take effect"; \
+	else \
+		echo "Please restart your shell or run: source $(PROFILE_FILE)"; \
 	fi
-	# Remove completions
-	sudo rm -f $(BASH_COMPLETION_DIR)/awsm
-	sudo rm -f $(ZSH_COMPLETION_DIR)/_awsm
+
+uninstall:
+	@rm -f $(INSTALL_DIR)/$(SCRIPT_NAME)
+	@rm -f $(COMPLETION_INSTALL_DIR)/$(COMPLETION_FILE)
+	@sed -i.bak '/# AWS Helper Functions/d' $(PROFILE_FILE)
+	@sed -i.bak '\#source $(INSTALL_DIR)/$(SCRIPT_NAME)#d' $(PROFILE_FILE)
+	@if [ "$(SHELL_TYPE)" = "bash" ]; then \
+		sed -i.bak '\#source $(COMPLETION_INSTALL_DIR)/$(COMPLETION_FILE)#d' $(PROFILE_FILE); \
+	elif [ "$(SHELL_TYPE)" = "zsh" ]; then \
+		sed -i.bak '\#fpath=($(COMPLETION_INSTALL_DIR) \$$fpath)#d' $(PROFILE_FILE); \
+	fi
+	@rm -f $(PROFILE_FILE).bak
+	@rmdir $(COMPLETION_INSTALL_DIR) 2>/dev/null || true
+	@rmdir $(INSTALL_DIR) 2>/dev/null || true
+	@echo "Uninstalled AWS helper functions"
